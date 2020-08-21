@@ -9,18 +9,30 @@ import InsertEmoticonIcon from '@material-ui/icons/InsertEmoticon';
 import MicIcon from '@material-ui/icons/Mic';
 import { useParams } from 'react-router-dom';
 import db from '../../firebase';
+import firebase from 'firebase';
+import { useStateValue } from '../../StateProvider';
 
 function Chat() {
   const [input, setInput] = useState('');
   const [seed, setSeed] = useState(' ');
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState(' ');
+  const [messages, setMessages] = useState([]);
+  const [{ user }] = useStateValue();
 
   useEffect(() => {
     if (roomId) {
       db.collection('rooms')
         .doc(roomId)
         .onSnapshot((snapshot) => setRoomName(snapshot.data().name));
+
+      db.collection('rooms')
+        .doc(roomId)
+        .collection('messages')
+        .orderBy('timestamp', 'asc')
+        .onSnapshot((snapshot) =>
+          setMessages(snapshot.docs.map((doc) => doc.data())),
+        );
     }
   }, [roomId]);
 
@@ -30,10 +42,32 @@ function Chat() {
 
   const sendMessage = (e) => {
     e.preventDefault();
-    console.log(input);
+    db.collection('rooms').doc(roomId).collection('messages').add({
+      message: input,
+      name: user.displayName,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
 
     setInput('');
   };
+
+  function showHoursMinutes(message) {
+    var date = new Date(message.timestamp?.toDate());
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    return `${hours}:${minutes}`;
+  }
+
+  function LastSeen(messages) {
+    var date = new Date(
+      messages[messages.length - 1]?.timestamp?.toDate(),
+    ).toUTCString();
+
+    var day = date.getDay;
+    var hour = date.getHours;
+    var minute = date.getMinutes;
+    return date;
+  }
 
   return (
     <div className="chat">
@@ -44,7 +78,7 @@ function Chat() {
 
         <div className="chat__headerInfo">
           <h3>{roomName}</h3>
-          <p>Last seen at..</p>
+          <p>{LastSeen(messages)}</p>
         </div>
 
         <div className="chat__headerRight">
@@ -63,12 +97,17 @@ function Chat() {
       </div>
 
       <div className="chat__body">
-        <p className={`chat__message ${true && 'chat__reciever'}`}>
-          Oi, José
-          <span className="chat__timestamp"> 17:50</span>
-        </p>
+        {messages.map((message) => (
+          <p
+            className={`chat__message ${
+              message.name === user.displayName && 'chat__reciever'
+            }`}
+          >
+            {message.message}
+            <span className="chat__timestamp">{showHoursMinutes(message)}</span>
+          </p>
+        ))}
       </div>
-
       <div className="chat__footer">
         <InsertEmoticonIcon />
         <form>

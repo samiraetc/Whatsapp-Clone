@@ -1,3 +1,16 @@
+@font-face {
+  font-family: SEGOE_UI;
+  src: url('../fonts/segoe-ui.otf');
+}
+
+h1,
+h2,
+h3,
+a,
+p {
+  font-family: SEGOE_UI;
+}
+
 .app {
   display: grid;
   place-items: center;
